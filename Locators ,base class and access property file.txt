@@ -1,0 +1,316 @@
+package Resource;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.util.Properties;
+import java.util.Scanner;
+import java.util.concurrent.TimeUnit;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.core.Logger;
+import org.jboss.aerogear.security.otp.Totp;
+import org.openqa.selenium.By;
+import org.openqa.selenium.Keys;
+import org.openqa.selenium.OutputType;
+import org.openqa.selenium.TakesScreenshot;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.support.PageFactory;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
+import org.testng.Assert;
+import org.testng.annotations.AfterSuite;
+import org.testng.annotations.BeforeSuite;
+import org.testng.annotations.BeforeTest;
+
+
+
+import io.github.bonigarcia.wdm.WebDriverManager;
+
+public class base {
+
+	public static WebDriver driver;
+	public Properties prop;
+	static WebDriverWait wait;
+	public static  Logger log =(Logger) LogManager.getLogger(base.class);
+	static String currentDir = System.getProperty("user.dir");
+	static Locators locator = new Locators();
+	public static TakesScreenshot scrShot ;
+	public static File SrcFile;
+	public static File DestFile;
+	public static AccessProperty property = new AccessProperty();
+	static Properties Property = property.readPropertiesFile(currentDir+"//src//main//resources//Appdata.properties");
+
+
+	public static void proxyLogin()
+	{
+
+		try
+		{
+			driver.manage().timeouts().implicitlyWait(10,TimeUnit.SECONDS);
+			System.out.println("enters");
+			Thread.sleep(10000);
+			if(driver.findElements(By.xpath("//*[@name='loginfmt']")).size()!=0)
+			{
+				driver.findElement(By.xpath("//*[@name='loginfmt']")).sendKeys("889050@cognizant.com");
+				driver.findElement(By.xpath("//*[@type='submit']")).click();
+
+				Thread.sleep(10000);
+
+				driver.findElement(By.xpath("//*[@name='passwd']")).sendKeys("Yamusri@030898");
+
+				driver.findElement(By.xpath("//*[@type='submit']")).click();
+				driver.manage().timeouts().implicitlyWait(15,TimeUnit.SECONDS);
+
+				Thread.sleep(4000);
+				//driver.findElement(By.cssSelector("[data-value='PhoneAppOTP']")).click(); //<-------
+				Thread.sleep(4000);
+				String Key =  Property.getProperty("Key");
+				Totp Totp = new Totp(Property.getProperty("Key"));
+				 
+				driver.findElement(By.xpath("//*[@name='otc']")).sendKeys(Totp.now());
+				driver.findElement(By.xpath("//*[@type='submit']")).click();
+				driver.findElement(By.xpath("//*[contains(@value,'Yes')]")).click();
+				Thread.sleep(10000);
+				Thread.sleep(10000);
+				System.out.println("sleep done");
+			}
+			else
+			{
+				driver.get("https://onecognizant.cognizant.com");
+				proxyLogin();
+			}
+
+			driver.manage().timeouts().implicitlyWait(15,TimeUnit.SECONDS);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+
+		}
+	}
+
+	
+
+	public static void navigateToCInsights() {
+		//Searching the CInsights inside the One Cognizant
+		String Apppcode =  Property.getProperty("AppCode");
+		base.waitForVisibleByCssSelector(locator.oneCogSeacrhbar);
+		driver.findElement(By.cssSelector(locator.oneCogSeacrhbar)).sendKeys(Apppcode);
+		base.waitForVisibleByCssSelector(locator.AppAutosuggestion);
+		driver.findElement(By.cssSelector(locator.AppAutosuggestion)).click();
+
+		WebDriver switchframe = driver.switchTo().frame("appFrame");
+
+
+	}
+
+	//GetText
+	public static String GetTextByCssSelector(String Element) {
+		base.waitForVisibleByCssSelector(Element);
+		//wait.until(ExpectedConditions.visibilityOfElementLocated((By.cssSelector(Element))));
+		return  driver.findElement(By.cssSelector(Element)).getText();	
+	}
+
+	//SendKeys
+	public static void SendKeysByCssSelector(String Element, String ValueToSend) {
+		base.waitForVisibleByCssSelector(Element);
+		driver.findElement(By.cssSelector(Element)).sendKeys(ValueToSend);	
+	}
+
+	//SendKeys
+	public static void SendKeysbyXpath(String Element, String ValueToSend) {
+		base.waitForVisibleByXpath(Element);
+		driver.findElement(By.xpath(Element)).sendKeys(ValueToSend);	
+	}
+
+	//Click
+	public static void ClickByCssSelector(String Element) {
+		base.waitForVisibleByCssSelector(Element);
+		driver.findElement(By.cssSelector(Element)).click();	
+	}
+	
+	public static void ClickByXpathSelector(String Element) {
+		base.waitForVisibleByXpath(Element);
+		driver.findElement(By.xpath(Element)).click();	
+	}
+
+	//Click
+	public static void ClickByCssSelector(String Element,Boolean VisbilityCheck) {
+		if (VisbilityCheck) {
+			base.waitForVisibleByCssSelector(Element);
+		} 
+		driver.findElement(By.cssSelector(Element)).click();	
+	}
+
+	public static void waitForVisibleByCssSelector(String Element) {
+		wait.until(ExpectedConditions.visibilityOfElementLocated((By.cssSelector(Element))));
+	}
+
+	public static void PresenceOfElementByCssSelector(String Element) {
+		wait.until(ExpectedConditions.presenceOfElementLocated((By.cssSelector(Element))));
+	}
+
+	public static void PresenceOfElementByXpath(String Element) {
+		wait.until(ExpectedConditions.presenceOfElementLocated((By.xpath(Element))));
+	}
+
+	public static void waitForVisibleByXpath(String Element) {
+		wait.until(ExpectedConditions.visibilityOfElementLocated((By.xpath(Element))));
+	}
+
+	public static void waitforelementClickable(String Element) {
+		wait.until(ExpectedConditions.elementToBeClickable((By.cssSelector(Element))));
+	}
+
+
+	public static void printLog(String LogMessage) {
+		log.info(LogMessage);
+	}
+
+	public static boolean checkElementEnabled(String Element) {
+		return driver.findElement(By.cssSelector(Element)).isEnabled();
+	}
+
+	public static boolean checkElementDisplayed(String Element) {
+		return driver.findElement(By.cssSelector(Element)).isDisplayed();
+	}
+
+	public static String TakeScreenshot(String Screenshotname) throws IOException, InterruptedException {
+		Thread.sleep(2000);
+		scrShot =((TakesScreenshot)driver);
+		SrcFile = scrShot.getScreenshotAs(OutputType.FILE);
+		String DestinationLoc = currentDir+"//cinsight.com//AllScreenShots//"+Screenshotname+".png";
+		DestFile=new File(DestinationLoc);
+		FileUtils.copyFile(SrcFile, DestFile);
+		log.info(Screenshotname + " Is Passed");
+		return  DestinationLoc;
+	}
+
+	public static String TakeScreenshotOnFail(String Screenshotname) throws IOException, InterruptedException {
+		Thread.sleep(2000);
+		scrShot =((TakesScreenshot)driver);
+		SrcFile = scrShot.getScreenshotAs(OutputType.FILE);
+		String DestinationLoc = currentDir+"//cinsight.com//FailedScreenshots//"+Screenshotname+".png";
+		DestFile=new File(DestinationLoc);
+		FileUtils.copyFile(SrcFile, DestFile);
+		log.info(Screenshotname + " Is Passed");
+		return  DestinationLoc;
+	}
+
+	public static void initDriver() throws Exception {
+		WebDriverManager.chromedriver().setup();
+		driver = new ChromeDriver();	
+		base.printLog("Driver initiated Successfully");
+		String URL="https://onecsit.cognizant.com/Home";
+		driver.get(URL);
+		driver.manage().window().maximize();
+		driver.manage().timeouts().implicitlyWait(30,TimeUnit.SECONDS);
+		wait = new WebDriverWait(driver, 20);
+		base.proxyLogin();
+		base.navigateToCInsights();
+		Repoter.InitTest();
+	}
+
+	public static void Teardown() {
+		Repoter.InitTest();
+		driver.quit();
+	}
+}
+
+
+
+
+
+
+package Resource;
+
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.util.Properties;
+
+public class AccessProperty {
+	public static Properties readPropertiesFile(String fileName){
+	      FileInputStream fis = null;
+	      Properties prop = null;
+	      try {
+	         fis = new FileInputStream(fileName);
+	         prop = new Properties();
+	         prop.load(fis);
+	      } catch(FileNotFoundException fnfe) {
+	         fnfe.printStackTrace();
+	      } catch(IOException ioe) {
+	         ioe.printStackTrace();
+	      } finally {
+	         try {
+				fis.close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+	      }
+	      return prop;
+	   }
+}
+
+
+
+package Resource;
+
+import org.openqa.selenium.By;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.support.FindBy;
+
+public class Locators extends base {
+
+
+	// ************* Log in page **********
+
+	public static String EmailTextBox = "//input[@type='email']";
+	public static String Password = "[name='passwd']";
+	public static String VerifyBySMS = "[id='idDiv_SAOTCS_Proofs'] > div:nth-child(1)";
+	public static String otpTextBox = "[name='otc']";
+	public static String siginInBtn  = "[id*='idSIButton']";
+	public static String oneCogSeacrhbar  = "#oneC_searchAutoComplete";
+	public static String AppAutosuggestion = "[class='appsResultText']";
+	public static String UserText = "#app > div > div > header > div > span > button > span";
+	public static String CinsightLogo = "#log0image>div";
+
+	// ************* Cingight Page **********
+
+	public static String UserBtn = "//*[text()=' Welcome! Oadira Swiggum ']";
+	public static String adminBtn = "[class='row px-6 pb-2 ma-0'] button";
+	public static String adminPageHeader = "#app > div > div.v-card.v-sheet.theme--light > header > div > span.font-weight-bold.ml-2.Cog-Blue";
+	public static String panels = "[class='layout wrap'] > div:nth-child(1) [class='container']";
+	public static String reportBtn = "#AdminSearch + div > button";
+	public static String popup = "[class='border-radius-7 v-card v-sheet theme--light white']";
+	public static String Addreports ="//div[text()='Add Reports to Library']";
+	public static String DescriptionTextBoxDisbaledstate = "//div[text()='Description'][@disabled='disabled']";
+	public static String WorkspaceTextBoxDisbaledstate = "//div[text()='Workspace/Group ID'][@disabled='disabled']";
+	public static String ReportDashboardTextBoxDisbaledstate = "//div[text()='Report/Dashboard ID'][@disabled='disabled']";
+	public static String AzzureAccontToggleBtn = "[role='switch'][aria-checked='false']";
+	public static String AddDashboard = "//div[text()='Add Dashboard']";
+	public static String AddPowerBiRadioBtn = "[role='radiogroup'] [class='col']:nth-child(1) div:nth-child(2) [type='button']";
+	public static String NextBtn= "[class=\"v-card__actions d-flex justify-center Bg-light-Brown mt-4 py-3\"] button:nth-child(2)";
+	public static String toggleBtn = "#LibTextField [class=\"v-input--selection-controls__ripple\"]";
+	public static String DescriptionTextBox = "//div[text()='Description']/parent::div //input";
+	public static String WorkspaceTextBox = "//div[text()='Workspace/Group ID']/parent::div //input";
+	public static String ReportAndDashboardTextBox = "//div[text()='Report/Dashboard ID']/parent::div //input";
+	public static String AddReportButton  = "[class='v-card__actions d-flex justify-end Bg-light-Brown mt-2 px-6 py-3'] [type='button']:nth-child(2)";
+	public static String AssertStatus = "#app > div:nth-child(6) > div > div > div.v-card__title.body-1.Bg-Cog-Blue.white--text.pr-5.py-3";
+	public static String OkBtn  = "[class='v-card__actions Bg-light-Brown d-flex justify-center'] button";
+	public static String sadc = "/html/body/div/div[2]/div[5]/div/div/div[1]/div[2]/div";
+	public static String dashClick = "[class='text-decoration-underline cursor-pointer Cog-Brown']";
+	public static String editClick = "[class='v-image v-responsive EditIcon ml-2 my-auto theme--light']";
+	public static String inputbox = "/html/body/div/div[2]/div/main/div/div/div/div[2]/div/div[2]/div/div/div/div/main/div/div/div[1]/div[1]/div[1]/div[2]/div/div[1]/div/div/div/div[2]/div[1]/div/div/div[1]/div[1]/input[1]";
+	public static String updBtn = "[class='pa-0 col'] button";
+	public static String updStatus = "/html/body/div/div[2]/div[3]/div/div/div[1]";
+	public static String updAsset = "/html/body/div/div[2]/div[1]/main/div/div/div/div[2]/div/div[2]/div/div/div/div/main/div/div/div[1]/div[2]/button/span";
+	public static String updAsset1 = "/html/body/div/div[2]/div[5]/div/div/div[3]/button[1]/span";
+
+
+}
